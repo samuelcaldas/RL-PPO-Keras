@@ -16,7 +16,7 @@ dic_agent_conf = {
 }
 
 dic_env_conf = {
-    "ENV_NAME": "LunarLander-v2",
+    "ENV_NAME": "CartPole-v1",
     "GYM_SEED": 1,
     "LIST_STATE_NAME": ["state"],
     "ACTION_RANGE": "-1-1", # or "-1~1"
