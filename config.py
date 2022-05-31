@@ -19,11 +19,11 @@ dic_env_conf = {
     "ENV_NAME": "CartPole-v1",
     "GYM_SEED": 1,
     "LIST_STATE_NAME": ["state"],
-    "ACTION_RANGE": "-1-1", # or "-1~1"
+    "ACTION_RANGE": "-1-1",  # or "-1~1"
     "POSITIVE_REWARD": False
 }
 
-dic_path ={
+dic_path = {
     "PPO": "records/PPO/"
 }
 
