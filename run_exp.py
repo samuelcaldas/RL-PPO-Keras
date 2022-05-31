@@ -34,6 +34,6 @@ def main(dictionary_agent_configuration, dictionary_env_configuration, dictionar
                 break
 
             if count_step % 10 == 0:
-                print("Episode:{}, step:{}, r_sum:{}".format(count_episode, count_step, reward_sum))
+                print("Episode:{}, step:{}, reward_sum:{}".format(count_episode, count_step, reward_sum))
 
 
