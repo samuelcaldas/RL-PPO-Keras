@@ -2,33 +2,33 @@ from env import Env
 from ppo import Agent
 
 
-def main(dic_agent_conf, dic_env_conf, dic_exp_conf, dic_path):
-    env = Env(dic_env_conf)
+def main(dictionary_agent_configuration, dictionary_env_configuration, dictionary_exp_configuration, dictionary_path):
+    env = Env(dictionary_env_configuration)
 
-    dic_agent_conf["ACTION_DIM"] = env.action_dim
-    dic_agent_conf["STATE_DIM"] = (env.state_dim, )
+    dictionary_agent_configuration["ACTION_DIM"] = env.action_dim
+    dictionary_agent_configuration["STATE_DIM"] = (env.state_dim, )
 
-    agent = Agent(dic_agent_conf, dic_path, dic_env_conf)
+    agent = Agent(dictionary_agent_configuration, dictionary_path, dictionary_env_configuration)
 
-    for cnt_episode in range(dic_exp_conf["TRAIN_ITERATIONS"]):
-        s = env.reset()
+    for cnt_episode in range(dictionary_exp_configuration["TRAIN_ITERATIONS"]):
+        state = env.reset()
         r_sum = 0
-        for cnt_step in range(dic_exp_conf["MAX_EPISODE_LENGTH"]):
-            if cnt_episode > dic_exp_conf["TRAIN_ITERATIONS"] - 10:
+        for cnt_step in range(dictionary_exp_configuration["MAX_EPISODE_LENGTH"]):
+            if cnt_episode > dictionary_exp_configuration["TRAIN_ITERATIONS"] - 10:
                 env.render()
 
-            a = agent.choose_action(s)
-            s_, r, done, _ = env.step(a)
+            action = agent.choose_action(state)
+            new_state, reward, done, _ = env.step(action)
 
-            r /= 100
-            r_sum += r
+            reward /= 100
+            r_sum += reward
             if done:
-                r = -1
+                reward = -1
 
-            agent.store_transition(s, a, s_, r, done)
-            if cnt_step % dic_agent_conf["BATCH_SIZE"] == 0 and cnt_step != 0:
+            agent.store_transition(state, action, new_state, reward, done)
+            if cnt_step % dictionary_agent_configuration["BATCH_SIZE"] == 0 and cnt_step != 0:
                 agent.train_network()
-            s = s_
+            state = new_state
 
             if done:
                 break

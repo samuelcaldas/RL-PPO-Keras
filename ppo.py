@@ -10,38 +10,38 @@ import numpy as np
 
 class Memory:
     def __init__(self):
-        self.batch_s = []
-        self.batch_a = []
-        self.batch_r = []
-        self.batch_s_ = []
+        self.batch_state = []
+        self.batch_action = []
+        self.batch_reward = []
+        self.batch_new_state = []
         self.batch_done = []
 
-    def store(self, s, a, s_, r, done):
-        self.batch_s.append(s)
-        self.batch_a.append(a)
-        self.batch_r.append(r)
-        self.batch_s_.append(s_)
+    def store(self, state, action, new_state, reward, done):
+        self.batch_state.append(state)
+        self.batch_action.append(action)
+        self.batch_reward.append(reward)
+        self.batch_new_state.append(new_state)
         self.batch_done.append(done)
 
     def clear(self):
-        self.batch_s.clear()
-        self.batch_a.clear()
-        self.batch_r.clear()
-        self.batch_s_.clear()
+        self.batch_state.clear()
+        self.batch_action.clear()
+        self.batch_reward.clear()
+        self.batch_new_state.clear()
         self.batch_done.clear()
 
     @property
     def cnt_samples(self):
-        return len(self.batch_s)
+        return len(self.batch_state)
 
 
 class Agent:
-    def __init__(self, dic_agent_conf, dic_path, dic_env_conf):
-        self.dic_agent_conf = dic_agent_conf
-        self.dic_path = dic_path
-        self.dic_env_conf = dic_env_conf
+    def __init__(self, dictionary_agent_configuration, dictionary_path, dictionary_env_configuration):
+        self.dictionary_agent_configuration = dictionary_agent_configuration
+        self.dictionary_path = dictionary_path
+        self.dictionary_env_configuration = dictionary_env_configuration
 
-        self.n_actions = self.dic_agent_conf["ACTION_DIM"]
+        self.num_actions = self.dictionary_agent_configuration["ACTION_DIM"]
 
         self.actor_network = self._build_actor_network()
         self.actor_old_network = self.build_network_from_copy(self.actor_network)
@@ -49,92 +49,92 @@ class Agent:
         self.critic_network = self._build_critic_network()
 
         self.dummy_advantage = np.zeros((1, 1))
-        self.dummy_old_prediction = np.zeros((1, self.n_actions))
+        self.dummy_old_prediction = np.zeros((1, self.num_actions))
 
         self.memory = Memory()
 
     def choose_action(self, state):
         assert isinstance(state, np.ndarray), "state must be numpy.ndarry"
 
-        state = np.reshape(state, [-1, self.dic_agent_conf["STATE_DIM"][0]])
+        state = np.reshape(state, [-1, self.dictionary_agent_configuration["STATE_DIM"][0]])
         prob = self.actor_network.predict_on_batch([state, self.dummy_advantage, self.dummy_old_prediction]).flatten()
-        action = np.random.choice(self.n_actions, p=prob)
+        action = np.random.choice(self.num_actions, p=prob)
         return action
 
     def train_network(self):
         n = self.memory.cnt_samples
-        discounted_r = []
+        discounted_reward = []
         if self.memory.batch_done[-1]:
-            v = 0
+            value = 0
         else:
-            v = self.get_v(self.memory.batch_s_[-1])
-        for r in self.memory.batch_r[::-1]:
-            v = r + self.dic_agent_conf["GAMMA"] * v
-            discounted_r.append(v)
-        discounted_r.reverse()
+            value = self.get_value(self.memory.batch_new_state[-1])
+        for r in self.memory.batch_reward[::-1]:
+            value = r + self.dictionary_agent_configuration["GAMMA"] * value
+            discounted_reward.append(value)
+        discounted_reward.reverse()
 
-        batch_s, batch_a, batch_discounted_r = np.vstack(self.memory.batch_s), \
-                     np.vstack(self.memory.batch_a), \
-                     np.vstack(discounted_r)
+        batch_state, batch_action, batch_discounted_reward = np.vstack(self.memory.batch_state), \
+                     np.vstack(self.memory.batch_action), \
+                     np.vstack(discounted_reward)
 
-        batch_v = self.get_v(batch_s)
-        batch_advantage = batch_discounted_r - batch_v
-        batch_old_prediction = self.get_old_prediction(batch_s)
+        batch_value = self.get_value(batch_state)
+        batch_advantage = batch_discounted_reward - batch_value
+        batch_old_prediction = self.get_old_prediction(batch_state)
 
-        batch_a_final = np.zeros(shape=(len(batch_a), self.n_actions))
-        batch_a_final[:, batch_a.flatten()] = 1
+        batch_action_final = np.zeros(shape=(len(batch_action), self.num_actions))
+        batch_action_final[:, batch_action.flatten()] = 1
         # print(batch_s.shape, batch_advantage.shape, batch_old_prediction.shape, batch_a_final.shape)
-        self.actor_network.fit(x=[batch_s, batch_advantage, batch_old_prediction], y=batch_a_final, verbose=0)
-        self.critic_network.fit(x=batch_s, y=batch_discounted_r, epochs=2, verbose=0)
+        self.actor_network.fit(x=[batch_state, batch_advantage, batch_old_prediction], y=batch_action_final, verbose=0)
+        self.critic_network.fit(x=batch_state, y=batch_discounted_reward, epochs=2, verbose=0)
         self.memory.clear()
         self.update_target_network()
 
-    def get_old_prediction(self, s):
-        s = np.reshape(s, (-1, self.dic_agent_conf["STATE_DIM"][0]))
-        return self.actor_old_network.predict_on_batch(s)
+    def get_old_prediction(self, state):
+        state = np.reshape(state, (-1, self.dictionary_agent_configuration["STATE_DIM"][0]))
+        return self.actor_old_network.predict_on_batch(state)
 
-    def store_transition(self, s, a, s_, r, done):
-        self.memory.store(s, a, s_, r, done)
+    def store_transition(self, state, action, new_state, reward, done):
+        self.memory.store(state, action, new_state, reward, done)
 
-    def get_v(self, s):
-        s = np.reshape(s, (-1, self.dic_agent_conf["STATE_DIM"][0]))
-        v = self.critic_network.predict_on_batch(s)
-        return v
+    def get_value(self, state):
+        state = np.reshape(state, (-1, self.dictionary_agent_configuration["STATE_DIM"][0]))
+        value = self.critic_network.predict_on_batch(state)
+        return value
 
     def save_model(self, file_name):
-        self.actor_network.save(os.path.join(self.dic_path["PATH_TO_MODEL"], "%s_actor_network.h5" % file_name))
-        self.critic_network.save(os.path.join(self.dic_path["PATH_TO_MODEL"], "%s_critic_network.h5" % file_name))
+        self.actor_network.save(os.path.join(self.dictionary_path["PATH_TO_MODEL"], "%s_actor_network.h5" % file_name))
+        self.critic_network.save(os.path.join(self.dictionary_path["PATH_TO_MODEL"], "%s_critic_network.h5" % file_name))
 
     def load_model(self):
-        self.actor_network = load_model(self.dic_path["PATH_TO_MODEL"], "%s_actor_network.h5")
-        self.critic_network = load_model(self.dic_path["PATH_TO_MODEL"], "%s_critic_network.h5")
+        self.actor_network = load_model(self.dictionary_path["PATH_TO_MODEL"], "%s_actor_network.h5")
+        self.critic_network = load_model(self.dictionary_path["PATH_TO_MODEL"], "%s_critic_network.h5")
         self.actor_old_network = deepcopy(self.actor_network)
 
     def _build_actor_network(self):
 
-        state = Input(shape=self.dic_agent_conf["STATE_DIM"], name="state")
+        state = Input(shape=self.dictionary_agent_configuration["STATE_DIM"], name="state")
 
         advantage = Input(shape=(1, ), name="Advantage")
-        old_prediction = Input(shape=(self.n_actions,), name="Old_Prediction")
+        old_prediction = Input(shape=(self.num_actions,), name="Old_Prediction")
 
         shared_hidden = self._shared_network_structure(state)
 
-        action_dim = self.dic_agent_conf["ACTION_DIM"]
+        action_dim = self.dictionary_agent_configuration["ACTION_DIM"]
 
         policy = Dense(action_dim, activation="softmax", name="actor_output_layer")(shared_hidden)
 
         actor_network = Model(inputs=[state, advantage, old_prediction], outputs=policy)
 
-        if self.dic_agent_conf["OPTIMIZER"] is "Adam":
-            actor_network.compile(optimizer=Adam(lr=self.dic_agent_conf["ACTOR_LEARNING_RATE"]),
+        if self.dictionary_agent_configuration["OPTIMIZER"] is "Adam":
+            actor_network.compile(optimizer=Adam(lr=self.dictionary_agent_configuration["ACTOR_LEARNING_RATE"]),
                                   loss=self.proximal_policy_optimization_loss(
                                     advantage=advantage, old_prediction=old_prediction,
                                   ))
-        elif self.dic_agent_conf["OPTIMIZER"] is "RMSProp":
-            actor_network.compile(optimizer=RMSprop(lr=self.dic_agent_conf["ACTOR_LEARNING_RATE"]))
+        elif self.dictionary_agent_configuration["OPTIMIZER"] is "RMSProp":
+            actor_network.compile(optimizer=RMSprop(lr=self.dictionary_agent_configuration["ACTOR_LEARNING_RATE"]))
         else:
             print("Not such optimizer for actor network. Instead, we use adam optimizer")
-            actor_network.compile(optimizer=Adam(lr=self.dic_agent_conf["ACTOR_LEARNING_RATE"]))
+            actor_network.compile(optimizer=Adam(lr=self.dictionary_agent_configuration["ACTOR_LEARNING_RATE"]))
         print("=== Build Actor Network ===")
         actor_network.summary()
 
@@ -142,31 +142,31 @@ class Agent:
         return actor_network
 
     def update_target_network(self):
-        alpha = self.dic_agent_conf["TARGET_UPDATE_ALPHA"]
+        alpha = self.dictionary_agent_configuration["TARGET_UPDATE_ALPHA"]
         self.actor_old_network.set_weights(alpha*np.array(self.actor_network.get_weights())
                                            + (1-alpha)*np.array(self.actor_old_network.get_weights()))
 
     def _build_critic_network(self):
-        state = Input(shape=self.dic_agent_conf["STATE_DIM"], name="state")
+        state = Input(shape=self.dictionary_agent_configuration["STATE_DIM"], name="state")
         shared_hidden = self._shared_network_structure(state)
 
-        if self.dic_env_conf["POSITIVE_REWARD"]:
+        if self.dictionary_env_configuration["POSITIVE_REWARD"]:
             q = Dense(1, activation="relu", name="critic_output_layer")(shared_hidden)
         else:
             q = Dense(1, name="critic_output_layer")(shared_hidden)
 
         critic_network = Model(inputs=state, outputs=q)
 
-        if self.dic_agent_conf["OPTIMIZER"] is "Adam":
-            critic_network.compile(optimizer=Adam(lr=self.dic_agent_conf["ACTOR_LEARNING_RATE"]),
-                                   loss=self.dic_agent_conf["CRITIC_LOSS"])
-        elif self.dic_agent_conf["OPTIMIZER"] is "RMSProp":
-            critic_network.compile(optimizer=RMSprop(lr=self.dic_agent_conf["ACTOR_LEARNING_RATE"]),
-                                   loss=self.dic_agent_conf["CRITIC_LOSS"])
+        if self.dictionary_agent_configuration["OPTIMIZER"] is "Adam":
+            critic_network.compile(optimizer=Adam(lr=self.dictionary_agent_configuration["ACTOR_LEARNING_RATE"]),
+                                   loss=self.dictionary_agent_configuration["CRITIC_LOSS"])
+        elif self.dictionary_agent_configuration["OPTIMIZER"] is "RMSProp":
+            critic_network.compile(optimizer=RMSprop(lr=self.dictionary_agent_configuration["ACTOR_LEARNING_RATE"]),
+                                   loss=self.dictionary_agent_configuration["CRITIC_LOSS"])
         else:
             print("Not such optimizer for actor network. Instead, we use adam optimizer")
-            critic_network.compile(optimizer=Adam(lr=self.dic_agent_conf["ACTOR_LEARNING_RATE"]),
-                                   loss=self.dic_agent_conf["CRITIC_LOSS"])
+            critic_network.compile(optimizer=Adam(lr=self.dictionary_agent_configuration["ACTOR_LEARNING_RATE"]),
+                                   loss=self.dictionary_agent_configuration["CRITIC_LOSS"])
         print("=== Build Critic Network ===")
         critic_network.summary()
 
@@ -178,18 +178,18 @@ class Agent:
         network_weights = actor_network.get_weights()
         network = model_from_json(network_structure)
         network.set_weights(network_weights)
-        network.compile(optimizer=Adam(lr=self.dic_agent_conf["ACTOR_LEARNING_RATE"]), loss="mse")
+        network.compile(optimizer=Adam(lr=self.dictionary_agent_configuration["ACTOR_LEARNING_RATE"]), loss="mse")
         return network
 
     def _shared_network_structure(self, state_features):
-        dense_d = self.dic_agent_conf["D_DENSE"]
+        dense_d = self.dictionary_agent_configuration["D_DENSE"]
         hidden1 = Dense(dense_d, activation="relu", name="hidden_shared_1")(state_features)
         hidden2 = Dense(dense_d, activation="relu", name="hidden_shared_2")(hidden1)
         return hidden2
 
     def proximal_policy_optimization_loss(self, advantage, old_prediction):
-        loss_clipping = self.dic_agent_conf["CLIPPING_LOSS_RATIO"]
-        entropy_loss = self.dic_agent_conf["ENTROPY_LOSS_RATIO"]
+        loss_clipping = self.dictionary_agent_configuration["CLIPPING_LOSS_RATIO"]
+        entropy_loss = self.dictionary_agent_configuration["ENTROPY_LOSS_RATIO"]
 
         def loss(y_true, y_pred):
             prob = y_true * y_pred

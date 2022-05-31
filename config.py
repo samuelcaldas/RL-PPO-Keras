@@ -1,4 +1,4 @@
-dic_agent_conf = {
+dictionary_agent_configuration = {
     "STATE_DIM": (8, ),
     "ACTOR_LEARNING_RATE": 1e-3,
     "CRITIC_LEARNING_RATE": 1e-3,
@@ -15,7 +15,7 @@ dic_agent_conf = {
     "TARGET_UPDATE_ALPHA": 0.9,
 }
 
-dic_env_conf = {
+dictionary_env_configuration = {
     "ENV_NAME": "CartPole-v1",
     "GYM_SEED": 1,
     "LIST_STATE_NAME": ["state"],
@@ -23,11 +23,11 @@ dic_env_conf = {
     "POSITIVE_REWARD": False
 }
 
-dic_path = {
+dictionary_path = {
     "PPO": "records/PPO/"
 }
 
-dic_exp_conf = {
+dictionary_exp_configuration = {
     "TRAIN_ITERATIONS": 100,
     "MAX_EPISODE_LENGTH": 1000,
     "TEST_ITERATIONS": 10
@@ -36,7 +36,7 @@ dic_exp_conf = {
 if __name__ == "__main__":
     import gym
 
-    env = gym.make(dic_env_conf["ENV_NAME"])
+    env = gym.make(dictionary_env_configuration["ENV_NAME"])
 
     print(env.action_space.n)
     print(env.reward_range)
