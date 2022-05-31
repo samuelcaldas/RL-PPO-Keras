@@ -31,7 +31,7 @@ class Memory:
         self.batch_done.clear()
 
     @property
-    def cnt_samples(self):
+    def count_samples(self):
         return len(self.batch_state)
 
 
@@ -62,7 +62,7 @@ class Agent:
         return action
 
     def train_network(self):
-        n = self.memory.cnt_samples
+        n = self.memory.count_samples
         discounted_reward = []
         if self.memory.batch_done[-1]:
             value = 0
@@ -73,9 +73,7 @@ class Agent:
             discounted_reward.append(value)
         discounted_reward.reverse()
 
-        batch_state, batch_action, batch_discounted_reward = np.vstack(self.memory.batch_state), \
-                     np.vstack(self.memory.batch_action), \
-                     np.vstack(discounted_reward)
+        batch_state, batch_action, batch_discounted_reward = np.vstack(self.memory.batch_state), np.vstack(self.memory.batch_action), np.vstack(discounted_reward)
 
         batch_value = self.get_value(batch_state)
         batch_advantage = batch_discounted_reward - batch_value
@@ -119,17 +117,14 @@ class Agent:
 
         shared_hidden = self._shared_network_structure(state)
 
-        action_dim = self.dictionary_agent_configuration["ACTION_DIM"]
+        action_dimension = self.dictionary_agent_configuration["ACTION_DIM"]
 
-        policy = Dense(action_dim, activation="softmax", name="actor_output_layer")(shared_hidden)
+        policy = Dense(action_dimension, activation="softmax", name="actor_output_layer")(shared_hidden)
 
         actor_network = Model(inputs=[state, advantage, old_prediction], outputs=policy)
 
         if self.dictionary_agent_configuration["OPTIMIZER"] is "Adam":
-            actor_network.compile(optimizer=Adam(lr=self.dictionary_agent_configuration["ACTOR_LEARNING_RATE"]),
-                                  loss=self.proximal_policy_optimization_loss(
-                                    advantage=advantage, old_prediction=old_prediction,
-                                  ))
+            actor_network.compile(optimizer=Adam(lr=self.dictionary_agent_configuration["ACTOR_LEARNING_RATE"]), loss=self.proximal_policy_optimization_loss(advantage=advantage, old_prediction=old_prediction))
         elif self.dictionary_agent_configuration["OPTIMIZER"] is "RMSProp":
             actor_network.compile(optimizer=RMSprop(lr=self.dictionary_agent_configuration["ACTOR_LEARNING_RATE"]))
         else:
@@ -151,22 +146,19 @@ class Agent:
         shared_hidden = self._shared_network_structure(state)
 
         if self.dictionary_env_configuration["POSITIVE_REWARD"]:
-            q = Dense(1, activation="relu", name="critic_output_layer")(shared_hidden)
+            critic_output_layer = Dense(1, activation="relu", name="critic_output_layer")(shared_hidden)
         else:
-            q = Dense(1, name="critic_output_layer")(shared_hidden)
+            critic_output_layer = Dense(1, name="critic_output_layer")(shared_hidden)
 
-        critic_network = Model(inputs=state, outputs=q)
+        critic_network = Model(inputs=state, outputs=critic_output_layer)
 
         if self.dictionary_agent_configuration["OPTIMIZER"] is "Adam":
-            critic_network.compile(optimizer=Adam(lr=self.dictionary_agent_configuration["ACTOR_LEARNING_RATE"]),
-                                   loss=self.dictionary_agent_configuration["CRITIC_LOSS"])
+            critic_network.compile(optimizer=Adam(lr=self.dictionary_agent_configuration["ACTOR_LEARNING_RATE"]), loss=self.dictionary_agent_configuration["CRITIC_LOSS"])
         elif self.dictionary_agent_configuration["OPTIMIZER"] is "RMSProp":
-            critic_network.compile(optimizer=RMSprop(lr=self.dictionary_agent_configuration["ACTOR_LEARNING_RATE"]),
-                                   loss=self.dictionary_agent_configuration["CRITIC_LOSS"])
+            critic_network.compile(optimizer=RMSprop(lr=self.dictionary_agent_configuration["ACTOR_LEARNING_RATE"]), loss=self.dictionary_agent_configuration["CRITIC_LOSS"])
         else:
             print("Not such optimizer for actor network. Instead, we use adam optimizer")
-            critic_network.compile(optimizer=Adam(lr=self.dictionary_agent_configuration["ACTOR_LEARNING_RATE"]),
-                                   loss=self.dictionary_agent_configuration["CRITIC_LOSS"])
+            critic_network.compile(optimizer=Adam(lr=self.dictionary_agent_configuration["ACTOR_LEARNING_RATE"]), loss=self.dictionary_agent_configuration["CRITIC_LOSS"])
         print("=== Build Critic Network ===")
         critic_network.summary()
 
@@ -191,12 +183,10 @@ class Agent:
         loss_clipping = self.dictionary_agent_configuration["CLIPPING_LOSS_RATIO"]
         entropy_loss = self.dictionary_agent_configuration["ENTROPY_LOSS_RATIO"]
 
-        def loss(y_true, y_pred):
-            prob = y_true * y_pred
-            old_prob = y_true * old_prediction
-            r = prob / (old_prob + 1e-10)
-            return -K.mean(K.minimum(r * advantage, K.clip(r, min_value=1 - loss_clipping,
-                                                           max_value=1 + loss_clipping) * advantage) + entropy_loss * (
-                           prob * K.log(prob + 1e-10)))
+        def loss(y_true, y_predicted):
+            probability = y_true * y_predicted
+            old_probability = y_true * old_prediction
+            reward = probability / (old_probability + 1e-10)
+            return -K.mean(K.minimum(reward * advantage, K.clip(reward, min_value=1 - loss_clipping, max_value=1 + loss_clipping) * advantage) + entropy_loss * (probability * K.log(probability + 1e-10)))
 
         return loss
