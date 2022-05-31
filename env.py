@@ -6,7 +6,7 @@ class Env:
         self.dic_env_config = dic_env_config
 
         self.env = gym.make(self.dic_env_config["ENV_NAME"])
-        self.env.seed(self.dic_env_config["GYM_SEED"])
+        self.env.reset(seed=self.dic_env_config["GYM_SEED"])
 
     def reset(self):
         return self.env.reset()
