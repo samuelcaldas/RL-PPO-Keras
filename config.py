@@ -12,7 +12,7 @@ dictionary_agent_configuration = {
     "ENTROPY_LOSS_RATIO": 0.2,
     "CRITIC_LOSS": "mean_squared_error",
     "OPTIMIZER": "Adam",
-    "TARGET_UPDATE_ALPHA": 0.9,
+    "TARGET_UPDATE_ALPHA": 0.9
 }
 
 dictionary_env_configuration = {
