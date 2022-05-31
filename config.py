@@ -1,5 +1,5 @@
 dictionary_agent_configuration = {
-    "STATE_DIM": (8, ),
+    "STATE_DIM": (4, ),
     "ACTOR_LEARNING_RATE": 1e-3,
     "CRITIC_LEARNING_RATE": 1e-3,
     "BATCH_SIZE": 10,
